@@ -14,7 +14,7 @@ set -euo pipefail
 # The whole script is one function, called on the last line, so a download
 # that stops halfway runs nothing.
 main() {
-release_tag='v0.1.1' # The release builder stamps this value.
+release_tag='v0.1.2' # The release builder stamps this value.
 repo=mfbaltaza/dtime-releases
 base=${DTIME_RELEASE_BASE:-https://github.com/$repo/releases}
 bundle=dtime.tar.gz
