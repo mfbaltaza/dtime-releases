@@ -14,7 +14,7 @@ set -euo pipefail
 # The whole script is one function, called on the last line, so a download
 # that stops halfway runs nothing.
 main() {
-release_tag='v0.1.0' # The release builder stamps this value.
+release_tag='v0.1.1' # The release builder stamps this value.
 repo=mfbaltaza/dtime-releases
 base=${DTIME_RELEASE_BASE:-https://github.com/$repo/releases}
 bundle=dtime.tar.gz
@@ -30,7 +30,6 @@ unit=$conf/systemd/user/dtime.service
 launcher=$share/applications/dtime.desktop
 icon=$share/icons/hicolor/scalable/apps/dtime.svg
 autostart=$conf/autostart/dtime-tray.desktop
-flags=$conf/chromium-flags.conf
 no_start=${DTIME_NO_START:-0}
 die() { printf 'dtime: %s\n' "$*" >&2; exit 1; }
 [[ $(uname -s) == Linux ]] || die 'This installer requires Linux.'
@@ -40,9 +39,11 @@ if [[ ${1:-} == --uninstall ]]; then
   rm -rf "$app" "$data/extension"
   if [[ $no_start != 1 ]]; then systemctl --user daemon-reload || true; fi
   printf 'dtime removed. Your tracked time stays in %s, your token and goals in %s\n' "$data" "$config"
-  if [[ -f $flags ]] && grep -qF "$data/extension" "$flags"; then
-    printf 'Chromium still lists %s in %s. Remove that path if you never want it back.\n' "$data/extension" "$flags"
-  fi
+  for file in "$conf"/chromium-flags.conf "$conf"/brave-flags.conf "$conf"/chrome-flags.conf; do
+    if [[ -f $file ]] && grep -qF "$data/extension" "$file"; then
+      printf 'Your browser still lists %s in %s. Remove that path if you never want it back.\n' "$data/extension" "$file"
+    fi
+  done
   exit 0
 fi
 [[ $# == 0 ]] || die 'Supported argument: --uninstall'
@@ -127,12 +128,21 @@ systemd_quote() { local s=$1; s=${s//\\/\\\\}; s=${s//\"/\\\"}; s=${s//%/%%}; pr
 # because the browser remembers where it was loaded from.
 rm -rf "$data/extension"
 cp -r "$app/extension" "$data/extension"
-extension=manual
-if [[ -f $flags ]]; then
-  if grep -qF "$data/extension" "$flags"; then extension=loaded
-  else
-    cp -p "$flags" "$flags.pre-dtime"
-    python3 - "$flags" "$data/extension" <<'PY'
+# Chromium-family browsers on Arch and Omarchy read extra flags from a file,
+# which is the only way to load an extension without clicking through
+# chrome://extensions. Arch's Chromium reads the file even when it is absent
+# so far, so it is created there.
+added=() running=()
+for entry in chromium:chromium-flags.conf:Chromium:chromium/chromium brave:brave-flags.conf:Brave:/brave google-chrome-stable:chrome-flags.conf:Chrome:/chrome/chrome; do
+  IFS=: read -r program file label process <<<"$entry"
+  file=$conf/$file
+  if [[ ! -f $file ]]; then
+    [[ $program == chromium && -f /etc/arch-release ]] && command -v chromium >/dev/null || continue
+    : > "$file"
+  fi
+  if ! grep -qF "$data/extension" "$file"; then
+    [[ ! -s $file ]] || cp -p "$file" "$file.pre-dtime"
+    python3 - "$file" "$data/extension" <<'PY'
 import sys
 from pathlib import Path
 path, ext = Path(sys.argv[1]), sys.argv[2]
@@ -145,9 +155,10 @@ else:
     lines.append('--load-extension=' + ext)
 path.write_text('\n'.join(lines) + '\n')
 PY
-    extension=added
   fi
-fi
+  added+=("$label")
+  if pgrep -f "$process( |\$)" >/dev/null 2>&1; then running+=("$label"); fi
+done
 if command -v gtk-update-icon-cache >/dev/null; then gtk-update-icon-cache -q -t -f "${icon%/scalable/apps/*}" >/dev/null 2>&1 || true; fi
 if command -v update-desktop-database >/dev/null; then update-desktop-database "$(dirname "$launcher")" >/dev/null 2>&1 || true; fi
 if [[ $no_start != 1 ]]; then
@@ -163,11 +174,19 @@ if [[ $no_start != 1 ]]; then
 fi
 replacing=0
 printf 'dtime %s installed.\n' "$release_tag"
-case $extension in
-  loaded) printf 'Browser extension: updated. Restart Chromium to load the new copy.\n';;
-  added) printf 'Browser extension: added to %s. Restart Chromium to load it.\n' "$flags";;
-  manual) printf 'Browser extension: open chrome://extensions, turn on Developer mode, choose "Load unpacked" and pick\n  %s\nWithout it, time in the browser is tracked but not which site. The dashboard tells you if it is silent.\n' "$data/extension";;
-esac
+manual() { printf '  open chrome://extensions, turn on Developer mode, choose "Load unpacked" and pick\n  %s\n' "$data/extension"; }
+if ((${#added[@]})); then
+  printf 'Browser extension: set to load in %s.\n' "${added[*]}"
+  if ((${#running[@]})); then
+    printf '  %s is running and only reads this when it starts. Quit it completely, web apps included\n  (pkill %s), and open it again.\n' "${running[*]}" "$(tr 'A-Z' 'a-z' <<<"${running[0]}")"
+  fi
+  printf '  If the dashboard still says the extension never reported (Google Chrome ignores this setting):\n'
+  manual
+else
+  printf 'Browser extension: this browser has to be told by hand. In Chromium, Chrome or Brave,\n'
+  manual
+fi
+printf '  Without it, time in the browser is tracked but not which site.\n'
 ((tray)) || printf 'Tray icon: skipped, the AyatanaAppIndicator3 bindings are not installed.\n'
 case ":$PATH:" in *":$bin:"*) ;; *) printf 'note: %s is not on your PATH, so type %s/dtime-open where these lines say dtime-open.\n' "$bin" "$bin";; esac
 if [[ $no_start == 1 ]]; then printf 'Nothing was started.\n'; return; fi

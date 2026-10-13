@@ -25,11 +25,14 @@ Later, open **dtime** in your app launcher, run `dtime-open`, or visit
 
 Without the extension dtime knows you were in the browser, but not on which site.
 
-On Omarchy the installer adds the extension to Chromium for you. Restart Chromium once.
+On Arch and Omarchy the installer sets Chromium and Brave to load the extension. The
+browser only reads that setting when it starts, so quit it completely, web apps
+included (`pkill chromium`), and open it again.
 
-On other setups, open `chrome://extensions`, turn on **Developer mode**, choose
-**Load unpacked** and pick `~/.local/share/dtime/extension`. It needs no token or
-settings on the same computer.
+Google Chrome ignores that setting, and other distributions do not have it. There,
+open `chrome://extensions`, turn on **Developer mode**, choose **Load unpacked** and
+pick `~/.local/share/dtime/extension`. It needs no token or settings on the same
+computer.
 
 The dashboard shows a warning when the extension has never reported or has gone quiet.
 
