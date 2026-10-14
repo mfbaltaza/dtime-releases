@@ -26,8 +26,11 @@ Later, open **dtime** in your app launcher, run `dtime-open`, or visit
 
 ## Install on Windows
 
-Copy this folder to the PC (or unzip a release there), then double-click
-`packaging/windows/install.cmd`. No administrator, no settings to edit.
+1. Download <https://github.com/mfbaltaza/dtime-releases/releases/latest/download/dtime-windows.zip>
+2. Right-click the file, choose **Extract All**, and open the extracted `dtime` folder.
+3. Double-click `packaging\windows\install.cmd`.
+
+No administrator, no settings to edit.
 
 The installer needs Python 3.9 or newer. If Python is missing it prints the
 python.org link and stops; tick **Add python.exe to PATH** while installing it,
@@ -40,8 +43,8 @@ which one it used.
 One step is left on purpose, because browsers allow it only by hand: open
 `chrome://extensions` (or `edge://extensions`), turn on **Developer mode**,
 choose **Load unpacked** and pick `%LOCALAPPDATA%\dtime\extension`. Without it
-dtime knows you were in a browser but not on which site. Paste the token when
-the extension options page asks; it is in `%LOCALAPPDATA%\dtime\token.txt`.
+dtime knows you were in a browser but not on which site. The extension opens
+its options page and confirms the connection; it needs no token on the same PC.
 
 Built to stay out of the way while you game: the tracker runs under
 `pythonw.exe`, below normal priority, and only calls Windows functions (no
@@ -72,8 +75,9 @@ The dashboard shows a warning when the extension has never reported or has gone 
 
 Run the install command again. Your tracked time, your goals and your token are kept.
 The version you are running is shown under **Settings** in the dashboard, and by
-`dtime --version`. On Windows, update by rerunning `install.cmd` from the new
-folder copy; your data and token are kept.
+`dtime --version`. On Windows, download `dtime-windows.zip` again, extract it, and
+double-click `packaging\windows\install.cmd` from the new `dtime` folder; your data
+and token are kept.
 
 ## Remove
 
