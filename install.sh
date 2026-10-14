@@ -14,7 +14,7 @@ set -euo pipefail
 # The whole script is one function, called on the last line, so a download
 # that stops halfway runs nothing.
 main() {
-release_tag='v0.1.3' # The release builder stamps this value.
+release_tag='v0.1.4' # The release builder stamps this value.
 repo=mfbaltaza/dtime-releases
 base=${DTIME_RELEASE_BASE:-https://github.com/$repo/releases}
 bundle=dtime.tar.gz
@@ -115,6 +115,7 @@ else
   tray=0
 fi
 systemd_quote() { local s=$1; s=${s//\\/\\\\}; s=${s//\"/\\\"}; s=${s//%/%%}; printf '"%s"' "$s"; }
+# Exit 3 means another copy already tracks this database, so a restart would only loop.
 {
   printf '[Unit]\nDescription=dtime self-hosted time tracker\nAfter=graphical-session.target\n\n[Service]\nExecStart=/usr/bin/env python3 '
   systemd_quote "$app/dtime.py"
@@ -122,7 +123,7 @@ systemd_quote() { local s=$1; s=${s//\\/\\\\}; s=${s//\"/\\\"}; s=${s//%/%%}; pr
   systemd_quote "XDG_CONFIG_HOME=$conf"
   printf '\nEnvironment='
   systemd_quote "XDG_DATA_HOME=$share"
-  printf '\nRestart=on-failure\n\n[Install]\nWantedBy=default.target\n'
+  printf '\nRestart=on-failure\nRestartPreventExitStatus=3\n\n[Install]\nWantedBy=default.target\n'
 } > "$unit"
 # The extension gets a copy at a path that stays the same across updates,
 # because the browser remembers where it was loaded from.
